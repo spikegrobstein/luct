@@ -1,4 +1,16 @@
 #! /usr/bin/perl -w
+
+##
+##	Linux User Creation Tool
+##	interactive utility for creating a new user and setting up custom settings
+##		ie: vhost, custom home directory, custom shell, etc
+##
+##	spike grobstein
+##	spikegrobstein@mac.com
+##	http://spike.grobste.in
+##
+
+
 use Net::LDAP;
 use Net::LDAP::LDIF;
 
