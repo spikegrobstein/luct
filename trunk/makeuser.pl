@@ -14,30 +14,14 @@
 use Net::LDAP;
 use Net::LDAP::LDIF;
 
-#print welcome screen
-print qq{
-    _ Welcome To _   
-   | |_   _  ___| |_ 
-   | | | | |/ __| __|
-   | | |_| | (__| |_ 
-   |_|\\__,_|\\___|\\__|
-+----------------------+
-  Written by spike
-      spike666\@mac.com
-+----------------------+
-
-};
+&print_welcome();
 
 #init
 print "Initializing... ";
 
-my $whoami = `whoami`;
-chomp($whoami);
+&check_root(); # gotta check to make sure we have proper privs before any time is wasted!
 
-if ($whoami ne 'root') {
-	print "You must be root to run this script!\n\n";
-	exit;
-}
+our $prompt_delimiter = ':'; #for prompting...
 
 our @uid_list = ();
 our @loginList = ();
@@ -170,6 +154,33 @@ print "done.\n";
 
 print "User creation complete!\n\n";
 exit;
+
+sub print_welcome() {
+	#print welcome screen
+	print qq{
+     _ Welcome To _   
+    | |_   _  ___| |_ 
+    | | | | |/ __| __|
+    | | |_| | (__| |_ 
+    |_|\\__,_|\\___|\\__|
++------------------------+
+ Linux User Creation Tool
+   Written by spike
+      spike666\@mac.com
++------------------------+
+
+	};
+}
+
+sub check_root() {
+	my $whoami = `whoami`;
+	chomp($whoami);
+
+	if ($whoami ne 'root') {
+		print "You must be root to run this script!\n\n";
+		exit;
+	}
+}
 
 sub read_input() {
 	my $prompt = shift;
