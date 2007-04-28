@@ -41,17 +41,30 @@ our $userDN = "ou=people,$baseDN";
 
 &makeLists();
 
+my $login = '';
+my $realname = '';
+my $email = '';
 my $defaultGid = 100;
 
 
 print "done\n\n";
 
-$input = "";
+# read the login...
+# make sure that it isn't already in use!
+while ($login eq '') {
+	$login = &read_input('Login', '', 0);
+	if (!&check_login($login)) {
+		print "Invalid login: already in use!\n";
+		$login = '';
+	}
+}
+
+my $input = '';
 
 while ($input eq "") {
 	print "User: ";
 	chomp($input = <STDIN>);
-	if (!&checkLogin($input)) {
+	if (!&check_login($input)) {
 		print "Invalid login\n";
 		$input = "";
 	}
@@ -307,7 +320,7 @@ sub addLogin {
 	$loginList[scalar @loginList] = $login;
 }
 
-sub checkLogin {
+sub check_login {
 	##
 	## make sure that the login that's passed to this function isn't already in the list
 	##
