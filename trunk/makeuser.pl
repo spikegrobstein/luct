@@ -31,6 +31,14 @@ print qq{
 #init
 print "Initializing... ";
 
+my $whoami = `whoami`;
+chomp($whoami);
+
+if ($whoami ne 'root') {
+	print "You must be root to run this script!\n\n";
+	exit;
+}
+
 our @uid_list = ();
 our @loginList = ();
 our $start_uid = 5000;
@@ -73,6 +81,11 @@ $gid = &read_input('gid', $gid, 1);
 $home = &read_input('Home', $home . $login, 1);
 $password = &read_input('Password', $password, 1);
 $domain = &read_input('Domain', $domain, 1);
+
+print "\n";
+print "Creating LDAP entries...\n\n";
+
+my $ldap_bind_pw = &read_input('LDAP Bind Password', '', 0);
 
 exit;
 
