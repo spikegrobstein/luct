@@ -41,11 +41,17 @@ our $userDN = "ou=people,$baseDN";
 
 &makeLists();
 
-my $login = '';
-my $realname = '';
-my $email = '';
-my $defaultGid = 100;
+my $default_gid = 100;
 
+my $login = '';
+my $real_name = '';
+my $email = '';
+my $shell = '/bin/bash';
+my $uid = $start_uid;
+my $gid = $default_gid;
+my $home = '/home/';
+my $password = &rand_password(8);
+my $domain = '';
 
 print "done\n\n";
 
@@ -59,97 +65,16 @@ while ($login eq '') {
 	}
 }
 
-my $input = '';
+$realname = &read_input('Real Name', $real_name, 0);
+$email = &read_input('Email', $email, 1);
+$shell = &read_input('Shell', $shell, 1);
+$uid = &read_input('uid', $uid, 1);
+$gid = &read_input('gid', $gid, 1);
+$home = &read_input('Home', $home . $login, 1);
+$password = &read_input('Password', $password, 1);
+$domain = &read_input('Domain', $domain, 1);
 
-while ($input eq "") {
-	print "User: ";
-	chomp($input = <STDIN>);
-	if (!&check_login($input)) {
-		print "Invalid login\n";
-		$input = "";
-	}
-}
-
-$login = $input;
-
-$input = "";
-
-$realname = "";
-print "Real name: ";
-chomp($input = <STDIN>);
-if ($input ne "") {
-	$realname = $input;
-}
-
-$input = "";
-        
-$email = "";
-print "Email [none]: ";   
-chomp($input = <STDIN>);
-if ($input ne "") {
-        $email = $input;
-}
-
-#$input = "";
-        
-#$quota = 25000;
-#print "Quota [${quota}K]: ";
-#chomp($input = <STDIN>);
-#if ($input ne "") {
-#        $quota = $input;  
-#}
-
-$input = "";
-
-$shell = "/bin/bash";
-print "Shell [$shell]: ";
-chomp($input = <STDIN>);
-if ($input ne "") { 
-	$shell = $input;
-}
-
-$input = "";
-
-$uid = $start_uid;
-print "uid [$uid]: ";
-chomp($input = <STDIN>);
-if ($input ne "") {
-	$uid = $input;
-}
-        
-$input = "";
-
-$gid = $defaultGid;
-print "gid [$gid]: "; 
-chomp($input = <STDIN>);
-if ($input ne "") {
-	$gid = $input;
-}
-
-$input = "";
-
-$home = "/home/$login";
-print "Home [$home]: ";
-chomp($input = <STDIN>);
-if ($input ne "") {
-	$home = $input;
-}
-
-$input = "";
-$password = &rand_password(8);
-print "Password [$password]: ";
-chomp($input = <STDIN>);
-if ($input ne "") {
-	$password = $input;
-}
-
-$input = "";
-$domain = "";
-print "Domain [none]: ";
-chomp($input = <STDIN>);
-if ($input ne "") {
-	$domain = $input;
-}
+exit;
 
 # ok, do all the work now...
 
