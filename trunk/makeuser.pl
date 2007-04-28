@@ -31,17 +31,17 @@ print qq{
 #init
 print "Initializing... ";
 
-my @uidList = ();
-my @loginList = ();
+our @uid_list = ();
+our @loginList = ();
 my $defaultGid = 100;
-my $startUid = 5000;
+my $start_uid = 5000;
 
-my $baseDN = "dc=darkerhosting,dc=net";
-my $adminDN = "cn=Manager,$baseDN";
-my $userDN = "ou=people,$baseDN";
+our $baseDN = "dc=darkerhosting,dc=net";
+our $adminDN = "cn=Manager,$baseDN";
+our $userDN = "ou=people,$baseDN";
 
 &makeLists();
-#print "Start UID: $startUid\n";
+
 print "done\n\n";
 
 $input = "";
@@ -95,7 +95,7 @@ if ($input ne "") {
 
 $input = "";
 
-$uid = $startUid;
+$uid = $start_uid;
 print "uid [$uid]: ";
 chomp($input = <STDIN>);
 if ($input ne "") {
@@ -218,24 +218,55 @@ print "done.\n";
 print "User creation complete!\n\n";
 exit;
 
+sub read_input() {
+	my $prompt = shift;
+	my $default = shift;
+	my $show_default = shift;
+
+	my $input = '';
+
+	my $full_prompt = $prompt;
+
+	if ($show_default) {
+		$full_prompt .= ' [' . $default . ']';
+	}
+
+	$full_prompt .= ': ';
+
+	print $full_prompt;
+	chomp ($input = <STDIN>);
+
+	if ($input eq '') {
+		return $default;
+	}
+
+	return $input;
+}
+
 sub makeLists {
 	# makes a list of all logins and uids to check for existing...
 	# then determines what the next UID should be.
 	
+	#first, make a list of all the passwd data
 	my @t_users = split(/\n/, `getent passwd`);
 	foreach (@t_users) {
 		my @data = split(/:/, $_);
-		&addLogin($data[0]);
-		&addUid($data[2]);
+		&addLogin($data[0]); #add the login to the login list
+		&addUid($data[2]); #add the UID to the UID list
 	}
+	
+	our @uid_list;
+	our $start_uid;
+	
+	# sort the UID list
+	@uid_list = sort { $a <=> $b } @uid_list;
 
-	@uidList = sort { $a <=> $b } @uidList;
-
+	#calculate what the highest UID is and set the start_uid to that+1
 	my $lastUid = 0;
-	foreach (@uidList) {
-		if ($_ > $startUid) {
+	foreach (@uid_list) {
+		if ($_ > $start_uid) {
 			if ($_ != $lastUid + 1) {
-				$startUid = $lastUid + 1;
+				$start_uid = $lastUid + 1;
 				return;
 			}
 		}
@@ -244,18 +275,25 @@ sub makeLists {
 }
 
 sub addUid {
+	##
+	##	add a uid to the uid list, making sure it doesn't already exist on there
+	##
 	my $uid = shift;
 	
-	foreach (@uidList) {
+	foreach (@uid_list) {
 		if ($_ eq $uid) {
 			return;
 		}
 	}
 
-	$uidList[scalar @uidList] = $uid;
+	$uid_list[scalar @uid_list] = $uid;
 }
 
 sub addLogin {
+	##
+	## add a login to the login list and avoid dupes
+	##
+	
 	my $login = shift;
 
 	foreach (@loginList) {
@@ -268,6 +306,10 @@ sub addLogin {
 }
 
 sub checkLogin {
+	##
+	## make sure that the login that's passed to this function isn't already in the list
+	##
+	
 	my $login = shift;
 
 	foreach (@loginList) {
@@ -279,6 +321,10 @@ sub checkLogin {
 }
 
 sub rand_password() {
+	##
+	##	generate a random password 
+	##
+	
 	my $len = shift; #password length
 	$len = 8 if $len == 0;
 
