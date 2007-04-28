@@ -33,14 +33,16 @@ print "Initializing... ";
 
 our @uid_list = ();
 our @loginList = ();
-my $defaultGid = 100;
-my $start_uid = 5000;
+our $start_uid = 5000;
 
 our $baseDN = "dc=darkerhosting,dc=net";
 our $adminDN = "cn=Manager,$baseDN";
 our $userDN = "ou=people,$baseDN";
 
 &makeLists();
+
+my $defaultGid = 100;
+
 
 print "done\n\n";
 
