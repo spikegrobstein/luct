@@ -41,6 +41,8 @@ our $baseDN = "dc=darkerhosting,dc=net";
 our $adminDN = "cn=Manager,$baseDN";
 our $userDN = "ou=people,$baseDN";
 
+our $apache_vhost_dir = '/etc/apache2/vhosts.d/';
+
 &makeLists();
 
 my $default_gid = 100;
@@ -91,6 +93,7 @@ exit;
 
 print "Connecting to LDAP server... ";
 
+# make connection to LDAP server and bind as a Manager...
 my $ldap = Net::LDAP->new($ldap_host, port => $ldap_port, version => $ldap_version, scheme => $ldap_scheme);
 my $result = $ldap->bind("$adminDN", password => $ldap_bind_pw);
 if ($result->code()) {
@@ -98,6 +101,7 @@ if ($result->code()) {
 	exit;
 }
 
+# create LDAP entry for our new user...
 print "\n";
 print "Adding entry... ";
 $result = $ldap->add(	"uid=$login,$userDN",
@@ -125,6 +129,7 @@ print "\n";
 print "Closing LDAP connection...\n";
 $ldap->unbind();
 
+# set up user's password in LDAP database using ldappasswd
 print "Setting LDAP password... ";
 $result = `ldappasswd -D "$adminDN" -w $ldap_bind_pw -s $password -x "uid=$login,$userDN"`;
 if ($?) {
@@ -133,6 +138,7 @@ if ($?) {
 }
 print "\n";
 
+#start setting up the users files (home directory, etc);
 print "Creating files...";
 `cp -R /etc/skel/ $home`;
 `chown -R $login:users $home`;
@@ -146,21 +152,26 @@ if ($real_name ne "") {
 }
 print "\t$home/public_html/index.html\n";
 
-my $hostPath = "/etc/apache2/vhosts.d/$login.conf";
 if ($domain ne "") {
-	`echo "" >> $hostPath`;
-	`echo "<VirtualHost *:80>" >> $hostPath`;
-	`echo "    ServerAlias *.$domain" >> $hostPath`;
-	if ($email ne "") {
-		`echo "    ServerAdmin $email" >> $hostPath`;
-	}
-	`echo "    DocumentRoot $home/public_html/" >> $hostPath`;
-	`echo "    ServerName $domain" >> $hostPath`;
-	`echo "</VirtualHost>" >> $hostPath`;
+		my $host_path = $apache_vhost_dir . $domain . '.conf';
 
-	print "\t$hostPath updated.\n";
+		print "Creating vhost file at: $host_path\n";
 
-	`apache2ctl restart`;
+		open(VHOST_FILE, $host_path);
+
+		my $server_admin = ($email ne '') ? 'Server Admin ' . $email : '';
+
+		print VHOST_FILE qq{
+## vhost configuration for $login
+<VirtualHost *:80>
+	ServerName $domain
+	ServerAlias *.$domain
+	$server_admin
+	DocumentRoot $home
+</VirtualHost>
+};
+
+	&restart_apache();
 	print "Apache restarted...\n";
 }
 print "done.\n";
@@ -334,4 +345,11 @@ sub rand_password() {
 	}
 
 	return $password;
+}
+
+sub restart_apache() {
+	##
+	##	restart apache...
+	##
+	`apache2ctl restart`;
 }
