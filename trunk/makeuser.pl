@@ -85,10 +85,6 @@ print "Creating LDAP entries...\n\n";
 
 my $ldap_bind_pw = &read_ldap_password();
 
-print "Password: " . $ldap_bind_pw;
-
-exit;
-
 # ok, do all the work now...
 
 print "Connecting to LDAP server... ";
