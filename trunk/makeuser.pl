@@ -126,7 +126,7 @@ print "Closing LDAP connection...\n";
 $ldap->unbind();
 
 print "Setting LDAP password... ";
-`ldappasswd -D "$adminDN" -w $ldap_bind_pw -s $password -x "uid=$login,$userDN"`;
+$result = `ldappasswd -D "$adminDN" -w $ldap_bind_pw -s $password -x "uid=$login,$userDN"`;
 if ($?) {
 	print "ERROR (" . $result->error() . ")\n\n";
 	exit;
