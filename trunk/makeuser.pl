@@ -10,9 +10,11 @@
 ##	http://spike.grobste.in
 ##
 
-
+# use LDAP stuff for communication to the LDAP database
 use Net::LDAP;
 use Net::LDAP::LDIF;
+
+use Term::ReadKey; # used to prevent echoing of password on the commandline
 
 &print_welcome();
 
@@ -35,13 +37,14 @@ our $userDN = "ou=people,$baseDN";
 
 my $default_gid = 100;
 
+# the various default settings for the new user
 my $login = '';
 my $real_name = '';
 my $email = '';
 my $shell = '/bin/bash';
 my $uid = $start_uid;
 my $gid = $default_gid;
-my $home = '/home/';
+my $home = '/home/'; # this gets changed right before it's used
 my $password = &rand_password(8);
 my $domain = '';
 
@@ -57,6 +60,7 @@ while ($login eq '') {
 	}
 }
 
+# read in everything else...
 $realname = &read_input('Real Name', $real_name, 0);
 $email = &read_input('Email', $email, 1);
 $shell = &read_input('Shell', $shell, 1);
@@ -69,7 +73,9 @@ $domain = &read_input('Domain', $domain, 1);
 print "\n";
 print "Creating LDAP entries...\n\n";
 
-my $ldap_bind_pw = &read_input('LDAP Bind Password', '', 0);
+my $ldap_bind_pw = &read_ldap_password();
+
+print "Password: " . $ldap_bind_pw;
 
 exit;
 
@@ -169,7 +175,7 @@ sub print_welcome() {
       spike666\@mac.com
 +------------------------+
 
-	};
+};
 }
 
 sub check_root() {
@@ -195,7 +201,7 @@ sub read_input() {
 		$full_prompt .= ' [' . $default . ']';
 	}
 
-	$full_prompt .= ': ';
+	$full_prompt .= $prompt_delimiter . ' ';
 
 	print $full_prompt;
 	chomp ($input = <STDIN>);
@@ -205,6 +211,22 @@ sub read_input() {
 	}
 
 	return $input;
+}
+
+sub read_ldap_password() {
+	##
+	##	prompts for and reads the LDAP bind password
+	##	doesnt' echo back to the shell in the process
+	##
+	
+	ReadMode('noecho');
+	print 'LDAP Bind Password' . $prompt_delimiter . ' ';
+	my $pass = ReadLine(0);
+	chomp($pass);
+	ReadMode(0);
+	print "\n";
+	
+	return $pass;
 }
 
 sub makeLists {
