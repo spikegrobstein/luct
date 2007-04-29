@@ -10,6 +10,8 @@
 ##	http://spike.grobste.in
 ##
 
+use strict;
+
 # use LDAP stuff for communication to the LDAP database
 use Net::LDAP;
 use Net::LDAP::LDIF;
@@ -28,6 +30,12 @@ our $prompt_delimiter = ':'; #for prompting...
 our @uid_list = ();
 our @loginList = ();
 our $start_uid = 5000;
+
+# LDAP settings
+our $ldap_port = 389; # non-encrypted...
+our $ldap_host = 'localhost';
+our $ldap_version = 3;
+our $ldap_scheme = 'ldap';
 
 our $baseDN = "dc=darkerhosting,dc=net";
 our $adminDN = "cn=Manager,$baseDN";
@@ -61,7 +69,7 @@ while ($login eq '') {
 }
 
 # read in everything else...
-$realname = &read_input('Real Name', $real_name, 0);
+$real_name = &read_input('Real Name', $real_name, 0);
 $email = &read_input('Email', $email, 1);
 $shell = &read_input('Shell', $shell, 1);
 $uid = &read_input('uid', $uid, 1);
@@ -81,11 +89,10 @@ exit;
 
 # ok, do all the work now...
 
-$adminPW = "allah";
-
 print "Connecting to LDAP server... ";
-$ldap = Net::LDAP->new("localhost", port => 389, version => 3, scheme => 'ldap');
-$result = $ldap->bind("$adminDN", password => $adminPW);
+
+my $ldap = Net::LDAP->new($ldap_host, port => $ldap_port, version => $ldap_version, scheme => $ldap_scheme);
+my $result = $ldap->bind("$adminDN", password => $ldap_bind_pw);
 if ($result->code()) {
 	print "ERROR: " . $result->error  . "\n\n";
 	exit;
@@ -97,7 +104,7 @@ $result = $ldap->add(	"uid=$login,$userDN",
 						attr => [
 							'uid'	=> "$login",
 							'sn'	=> "$login",
-							'cn'	=> "$realname",
+							'cn'	=> "$real_name",
 							'objectClass' => ['person', 'organizationalPerson',
 								'inetOrgPerson', 'posixAccount', 'top',
 								'shadowAccount'],
@@ -119,7 +126,7 @@ print "Closing LDAP connection...\n";
 $ldap->unbind();
 
 print "Setting LDAP password... ";
-`ldappasswd -D "$adminDN" -w $adminPW -s $password -x "uid=$login,$userDN"`;
+`ldappasswd -D "$adminDN" -w $ldap_bind_pw -s $password -x "uid=$login,$userDN"`;
 if ($?) {
 	print "ERROR (" . $result->error() . ")\n\n";
 	exit;
@@ -132,14 +139,14 @@ print "Creating files...";
 `chmod -R 711 $home`;
 `chmod o+r $home/public_html`;
 
-if ($realname ne "") {
-	`echo "<html><head><title>$realname</title></head><body><center>Future home of <b>${realname}'s</b> website.</body></html>" > $home/public_html/index.html`;
+if ($real_name ne "") {
+	`echo "<html><head><title>$real_name</title></head><body><center>Future home of <b>${real_name}'s</b> website.</body></html>" > $home/public_html/index.html`;
 } else {
-	`echo "<html><head><title>$login</title></head><body><center>Future home of <b>${user}'s</b> website.</body></html>" > $home/public_html/index.html`;
+	`echo "<html><head><title>$login</title></head><body><center>Future home of <b>${login}'s</b> website.</body></html>" > $home/public_html/index.html`;
 }
 print "\t$home/public_html/index.html\n";
 
-$hostPath = "/etc/apache2/vhosts.d/$login.conf";
+my $hostPath = "/etc/apache2/vhosts.d/$login.conf";
 if ($domain ne "") {
 	`echo "" >> $hostPath`;
 	`echo "<VirtualHost *:80>" >> $hostPath`;
@@ -218,6 +225,8 @@ sub read_ldap_password() {
 	##	prompts for and reads the LDAP bind password
 	##	doesnt' echo back to the shell in the process
 	##
+	
+	our $prompt_delimiter;
 	
 	ReadMode('noecho');
 	print 'LDAP Bind Password' . $prompt_delimiter . ' ';
