@@ -5,6 +5,20 @@
 ##	interactive utility for creating a new user and setting up custom settings
 ##		ie: vhost, custom home directory, custom shell, etc
 ##
+##	Uses LDAP to create user entry
+##	Requests:		login name (checked against output of `getent passwd` to prevent duplicate users)
+##						 	real name (or a better description of who the user is)
+##							email address
+##							shell (defaults to /bin/bash)
+##							uid (calculates an available UID in a pre-set range (see $start_uid global))
+##							gid (defaults to 100)
+##							home (defaults to /home/$login)
+##							password (defaults to an 8-character random upper/lower alphanumeric password)
+##							domain (and automatically configures the vhost for it. perhaps I should had a customization wizard for this)
+##
+##	Creates and sets permissions of user's home directory and public_html directories with a welcome message in ~user/public_html/index.html
+##	
+##
 ##	spike grobstein
 ##	spikegrobstein@mac.com
 ##	http://spike.grobste.in
@@ -25,11 +39,7 @@ print "Initializing... ";
 
 &check_root(); # gotta check to make sure we have proper privs before any time is wasted!
 
-our $prompt_delimiter = ':'; #for prompting...
-
-our @uid_list = ();
-our @loginList = ();
-our $start_uid = 5000;
+our $prompt_delimiter = ':'; #for prompting... (see sub read_input())
 
 # LDAP settings
 our $ldap_port = 389; # non-encrypted...
@@ -43,6 +53,10 @@ our $userDN = "ou=people,$baseDN";
 
 our $apache_vhost_dir = '/etc/apache2/vhosts.d/';
 
+# for existing data... fetched and computed using `getent passwd`
+our @uid_list = ();
+our @loginList = ();
+our $start_uid = 5000;
 &makeLists();
 
 my $default_gid = 100;
@@ -54,11 +68,13 @@ my $email = '';
 my $shell = '/bin/bash';
 my $uid = $start_uid;
 my $gid = $default_gid;
-my $home = '/home/'; # this gets changed right before it's used
+my $home = '/home/'; # this gets appended to right before it's used
 my $password = &rand_password(8);
 my $domain = '';
 
-print "done\n\n";
+print "done\n\n"; # finished initializing
+
+#start prompting for input...
 
 # read the login...
 # make sure that it isn't already in use!
@@ -83,6 +99,7 @@ $domain = &read_input('Domain', $domain, 1);
 print "\n";
 print "Creating LDAP entries...\n\n";
 
+# request the LDAP bind password, so we can make changes to the database
 my $ldap_bind_pw = &read_ldap_password();
 
 # ok, do all the work now...
@@ -121,6 +138,7 @@ if ($result->code()) {
 	exit;
 }
 
+# close LDAP connection
 print "\n";
 print "Closing LDAP connection...\n";
 $ldap->unbind();
@@ -134,13 +152,14 @@ if ($?) {
 }
 print "\n";
 
-#start setting up the users files (home directory, etc);
+# start setting up the users files (home directory, etc);
 print "Creating files...";
-`cp -R /etc/skel/ $home`;
-`chown -R $login:users $home`;
-`chmod -R 711 $home`;
-`chmod o+r $home/public_html`;
+`cp -R /etc/skel/ $home`;				# copy the skel directory into place
+`chown -R $login:users $home`;	# set the ownership
+`chmod -R 711 $home`;						# set the permissions to 711, so no one else can see anything
+`chmod o+r $home/public_html`;	# give read access to public_html
 
+# create HTML page with "Future home of USER's webstite!" USER = (realname != '') ? realname : login
 if ($real_name ne "") {
 	`echo "<html><head><title>$real_name</title></head><body><center>Future home of <b>${real_name}'s</b> website.</body></html>" > $home/public_html/index.html`;
 } else {
@@ -148,6 +167,7 @@ if ($real_name ne "") {
 }
 print "\t$home/public_html/index.html\n";
 
+# create virtualhost file and restart apache if $domain was set
 if ($domain ne "") {
 		my $host_path = $apache_vhost_dir . $domain . '.conf';
 
@@ -172,8 +192,15 @@ if ($domain ne "") {
 }
 print "done.\n";
 
+# done.
+
 print "User creation complete!\n\n";
+
 exit;
+
+##
+##	subroutines
+##
 
 sub print_welcome() {
 	#print welcome screen
